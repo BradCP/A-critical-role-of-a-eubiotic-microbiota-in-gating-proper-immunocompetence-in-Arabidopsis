@@ -1,0 +1,120 @@
+#Set variable for feature table directory and taxonomy directory.
+FEATURE_TABLE_DIR=feature_table
+TAXONOMY_DIR=taxonomy
+
+## Alpha rarefaction plotting.
+mkdir -p rarefaction
+
+#Set depth for alpha rarefaction plotting.
+ALPHA_DEPTH=25000
+
+#Alpha rarefaction plotting.
+qiime diversity alpha-rarefaction \
+  --i-table $FEATURE_TABLE_DIR/filtered_table.qza \
+  --i-phylogeny $TAXONOMY_DIR/rooted-tree.qza \
+  --p-max-depth $ALPHA_DEPTH \
+  --p-steps `expr $ALPHA_DEPTH / 100` \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization rarefaction/alpha_rarefaction_plot_$ALPHA_DEPTH.qzv
+
+#Filter to just 0.5x, 1x, and input samples.
+qiime feature-table filter-samples \
+  --i-table $FEATURE_TABLE_DIR/filtered_table.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --p-where "[nutrient] IN ('0.5x_LS', '1x_LS', 'input')" \
+  --o-filtered-table $FEATURE_TABLE_DIR/filtered_table-phyllo_input.qza
+
+qiime feature-table summarize \
+  --i-table $FEATURE_TABLE_DIR/filtered_table-phyllo_input.qza \
+  --m-sample-metadata-file sample-metadata.tsv \
+  --o-visualization $FEATURE_TABLE_DIR/filtered_table-phyllo_input.qzv
+
+#Determine depth for diversity analyses using "Interactive Sample Detail" tab in filtered_table.qzv.
+DEPTH=5765
+
+#Set directory name for diversity analyses.
+DIVERSITY_DIR=diversity_phyllo-input_$DEPTH
+
+#Run core diversity analyses. 
+qiime diversity core-metrics-phylogenetic \
+  --i-phylogeny $TAXONOMY_DIR/rooted-tree.qza \
+  --i-table $FEATURE_TABLE_DIR/filtered_table-phyllo_input.qza \
+  --p-n-jobs-or-threads $SLURM_CPUS_PER_TASK \
+  --p-sampling-depth $DEPTH \
+  --m-metadata-file sample-metadata.tsv \
+  --output-dir $DIVERSITY_DIR
+
+#Calculate additional alpha diversity metric: Simpson Diversity.
+qiime diversity alpha \
+  --i-table $FEATURE_TABLE_DIR/filtered_table-phyllo_input.qza \
+  --p-metric simpson \
+  --o-alpha-diversity $DIVERSITY_DIR/simpson_vector.qza
+
+## Alpha significance testing ##
+
+#Simpson diversity significance statistical testing.
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity $DIVERSITY_DIR/simpson_vector.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization $DIVERSITY_DIR/simpson_group_significance.qzv
+
+#Observed OTUs significance statistical testing.
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity $DIVERSITY_DIR/observed_features_vector.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization $DIVERSITY_DIR/observed_features_group_significance.qzv
+
+#Faith's phylogenetic diversity significance statistical testing.
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity $DIVERSITY_DIR/faith_pd_vector.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization $DIVERSITY_DIR/faith_pd_group_significance.qzv
+
+#Evenness significance statistical testing.
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity $DIVERSITY_DIR/evenness_vector.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization $DIVERSITY_DIR/evenness_group_significance.qzv
+
+#Shannon diversity significance statistical testing.
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity $DIVERSITY_DIR/shannon_vector.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization $DIVERSITY_DIR/shannon_group_significance.qzv
+
+## Beta significance testing ##
+
+#Specify a metadata column to examine significance. This gives you a q value to associate with your pretty ordination analyses. For instance, to see if some beta diversity metric is significantly different between various genotypes, replace "0000000" with "genotype" -- or the corresponding column header for genotype data.
+SIGNIFICANCE=nutrient
+
+#Group significance statistical testing using unweighted UniFrac distances.
+qiime diversity beta-group-significance \
+  --i-distance-matrix $DIVERSITY_DIR/unweighted_unifrac_distance_matrix.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column $SIGNIFICANCE \
+  --p-pairwise \
+  --o-visualization $DIVERSITY_DIR/unweighted_unifrac_significance_$SIGNIFICANCE.qzv
+
+#Group significance statistical testing using weighted UniFrac distances.
+qiime diversity beta-group-significance \
+  --i-distance-matrix $DIVERSITY_DIR/weighted_unifrac_distance_matrix.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column $SIGNIFICANCE \
+  --p-pairwise \
+  --o-visualization $DIVERSITY_DIR/weighted_unifrac_significance_$SIGNIFICANCE.qzv
+
+#Group significance statistical testing using Jaccard distances.
+qiime diversity beta-group-significance \
+  --i-distance-matrix $DIVERSITY_DIR/jaccard_distance_matrix.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column $SIGNIFICANCE \
+  --p-pairwise \
+  --o-visualization $DIVERSITY_DIR/jaccard_significance_$SIGNIFICANCE.qzv
+
+#Group significance statistical testing using Bray-Curtis distances.
+qiime diversity beta-group-significance \
+  --i-distance-matrix $DIVERSITY_DIR/bray_curtis_distance_matrix.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column $SIGNIFICANCE \
+  --p-pairwise \
+  --o-visualization $DIVERSITY_DIR/bray_curtis_significance_$SIGNIFICANCE.qzv

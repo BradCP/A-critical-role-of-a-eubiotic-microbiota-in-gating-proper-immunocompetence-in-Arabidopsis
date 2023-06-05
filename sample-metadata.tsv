@@ -1,0 +1,33 @@
+sample-id	compartment	nutrient	box	community
+p001	phyllosphere	0.5x_LS	HO8	MSU22
+p002	phyllosphere	0.5x_LS	HO8	MSU22
+p003	phyllosphere	0.5x_LS	HO8	MSU22
+p004	phyllosphere	0.5x_LS	HO8	MSU22
+p005	phyllosphere	0.5x_LS	HO8	MSU22
+p006	phyllosphere	0.5x_LS	HO8	MSU22
+p007	phyllosphere	0.5x_LS	HO9	MSU22
+p008	phyllosphere	0.5x_LS	HO9	MSU22
+p009	phyllosphere	0.5x_LS	HO9	MSU22
+p010	phyllosphere	0.5x_LS	HO9	MSU22
+p011	phyllosphere	0.5x_LS	HO9	MSU22
+p012	phyllosphere	0.5x_LS	HO9	MSU22
+p013	phyllosphere	1x_LS	HO10	MSU22
+p014	phyllosphere	1x_LS	HO10	MSU22
+p015	phyllosphere	1x_LS	HO10	MSU22
+p016	phyllosphere	1x_LS	HO10	MSU22
+p017	phyllosphere	1x_LS	HO10	MSU22
+p018	phyllosphere	1x_LS	HO10	MSU22
+p019	phyllosphere	1x_LS	HO11	MSU22
+p020	phyllosphere	1x_LS	HO11	MSU22
+p021	phyllosphere	1x_LS	HO11	MSU22
+p022	phyllosphere	1x_LS	HO11	MSU22
+p023	phyllosphere	1x_LS	HO11	MSU22
+p024	phyllosphere	1x_LS	HO11	MSU22
+p031	input	input		MSU22
+p032	input	input		MSU22
+p033	input	input		MSU22
+p034	input	input		MSU22
+p035	input	input		MSU22
+p036	input	input		MSU22
+RTSF_NTC_2060	NTC_RTSF	NTC_RTSF		
+RTSF_NTC_2061	NTC_RTSF	NTC_RTSF		

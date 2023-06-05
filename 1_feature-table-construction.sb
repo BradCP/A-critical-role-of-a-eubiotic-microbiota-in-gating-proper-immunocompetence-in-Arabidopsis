@@ -1,0 +1,162 @@
+#Indicate fastq sequence location(s) using the environment variables below.
+LANE1=/work/bcp30/BP_nutrients/20230515_Amplicon_PE250/seqs
+LANE2=/work/bcp30/BP_nutrients/20230517_Amplicon_PE250/seqs
+
+#Create working directory for sequences.
+mkdir -p paired-end_sequences/
+
+#Indicate primers
+F_PRIMER=AACMGGATTAGATACCCKG
+R_PRIMER=ACGTCATCCCCACCTTCC
+
+############
+## LANE 1 ##
+############
+
+#Import sequences.
+qiime tools import \
+  --type 'SampleData[PairedEndSequencesWithQuality]' \
+  --input-path $LANE1 \
+  --input-format CasavaOneEightSingleLanePerSampleDirFmt \
+  --output-path paired-end_sequences/demux-paired-end_lane-1.qza
+
+#Visualize sequences.
+qiime demux summarize \
+  --i-data paired-end_sequences/demux-paired-end_lane-1.qza \
+  --o-visualization paired-end_sequences/demux-paired-end_lane-1.qzv
+
+#Trim primers from sequences.
+qiime cutadapt trim-paired \
+  --i-demultiplexed-sequences paired-end_sequences/demux-paired-end_lane-1.qza \
+  --p-cores $SLURM_CPUS_PER_TASK \
+  --p-front-f $F_PRIMER \
+  --p-front-r $R_PRIMER \
+  --p-match-read-wildcards \
+  --p-discard-untrimmed \
+  --p-minimum-length 150 \
+  --p-error-rate 0.17 \
+  --p-overlap 10 \
+  --verbose \
+  --o-trimmed-sequences paired-end_sequences/demux-trimmed-paired-end_lane-1.qza
+
+#Visualize trimmed sequences.
+qiime demux summarize \
+  --i-data paired-end_sequences/demux-trimmed-paired-end_lane-1.qza \
+  --o-visualization paired-end_sequences/demux-trimmed-paired-end_lane-1.qzv
+
+#Set feature table directory variable.
+FEATURE_TABLE_DIR=feature_table
+
+#Create working directory for feature table.
+mkdir -p $FEATURE_TABLE_DIR
+
+qiime dada2 denoise-paired \
+  --i-demultiplexed-seqs paired-end_sequences/demux-trimmed-paired-end_lane-1.qza \
+  --p-trunc-len-f 220\
+  --p-trunc-len-r 220\
+  --p-n-threads $SLURM_CPUS_PER_TASK \
+  --verbose \
+  --o-denoising-stats $FEATURE_TABLE_DIR/dada2-stats_1.qza \
+  --o-representative-sequences $FEATURE_TABLE_DIR/rep-seqs_1.qza \
+  --o-table $FEATURE_TABLE_DIR/table_1.qza
+
+#Visualize DADA2 statistics.
+qiime metadata tabulate \
+  --m-input-file $FEATURE_TABLE_DIR/dada2-stats_1.qza \
+  --o-visualization $FEATURE_TABLE_DIR/dada2-stats_1.qzv
+
+#Visualize feature table 1 data summaries
+qiime feature-table summarize \
+  --i-table $FEATURE_TABLE_DIR/table_1.qza \
+  --m-sample-metadata-file sample-metadata.tsv \
+  --o-visualization $FEATURE_TABLE_DIR/table_1.qzv
+
+qiime feature-table tabulate-seqs \
+  --i-data $FEATURE_TABLE_DIR/rep-seqs_1.qza \
+  --o-visualization $FEATURE_TABLE_DIR/rep-seqs_1.qzv
+
+############
+## Lane 2 ##
+############
+
+#Import sequences.
+qiime tools import \
+  --type 'SampleData[PairedEndSequencesWithQuality]' \
+  --input-path $LANE2 \
+  --input-format CasavaOneEightSingleLanePerSampleDirFmt \
+  --output-path paired-end_sequences/demux-paired-end_lane-2.qza
+
+#Visualize sequences.
+qiime demux summarize \
+  --i-data paired-end_sequences/demux-paired-end_lane-2.qza \
+  --o-visualization paired-end_sequences/demux-paired-end_lane-2.qzv
+
+#Trim primers from sequences.
+qiime cutadapt trim-paired \
+  --i-demultiplexed-sequences paired-end_sequences/demux-paired-end_lane-2.qza \
+  --p-cores $SLURM_CPUS_PER_TASK \
+  --p-front-f $F_PRIMER \
+  --p-front-r $R_PRIMER \
+  --p-match-read-wildcards \
+  --p-discard-untrimmed \
+  --p-minimum-length 150 \
+  --p-error-rate 0.17 \
+  --p-overlap 10 \
+  --verbose \
+  --o-trimmed-sequences paired-end_sequences/demux-trimmed-paired-end_lane-2.qza
+
+#Visualize trimmed sequences.
+qiime demux summarize \
+  --i-data paired-end_sequences/demux-trimmed-paired-end_lane-2.qza \
+  --o-visualization paired-end_sequences/demux-trimmed-paired-end_lane-2.qzv
+
+#Create working directory for feature table.
+mkdir -p feature_table
+
+#Denoise ASVs with DADA2.
+qiime dada2 denoise-paired \
+  --i-demultiplexed-seqs paired-end_sequences/demux-trimmed-paired-end_lane-2.qza \
+  --p-trunc-len-f 220\
+  --p-trunc-len-r 220\
+  --p-n-threads $SLURM_CPUS_PER_TASK \
+  --verbose \
+  --o-denoising-stats $FEATURE_TABLE_DIR/dada2-stats_2.qza \
+  --o-representative-sequences $FEATURE_TABLE_DIR/rep-seqs_2.qza \
+  --o-table $FEATURE_TABLE_DIR/table_2.qza
+
+#Visualize DADA2 statistics.
+qiime metadata tabulate \
+  --m-input-file $FEATURE_TABLE_DIR/dada2-stats_2.qza \
+  --o-visualization $FEATURE_TABLE_DIR/dada2-stats_2.qzv
+
+#Visualize feature table 2 data summaries.
+qiime feature-table summarize \
+  --i-table $FEATURE_TABLE_DIR/table_2.qza \
+  --m-sample-metadata-file sample-metadata.tsv \
+  --o-visualization $FEATURE_TABLE_DIR/table_2.qzv
+
+qiime feature-table tabulate-seqs \
+  --i-data $FEATURE_TABLE_DIR/rep-seqs_2.qza \
+  --o-visualization $FEATURE_TABLE_DIR/rep-seqs_2.qzv
+
+#Merge Lane 1 and Lane 2 feature tables and data summaries.
+qiime feature-table merge \
+  --i-tables $FEATURE_TABLE_DIR/table_1.qza \
+  --i-tables $FEATURE_TABLE_DIR/table_2.qza \
+  --p-overlap-method sum \
+  --o-merged-table $FEATURE_TABLE_DIR/table.qza
+
+qiime feature-table merge-seqs \
+  --i-data $FEATURE_TABLE_DIR/rep-seqs_1.qza \
+  --i-data $FEATURE_TABLE_DIR/rep-seqs_2.qza \
+  --o-merged-data $FEATURE_TABLE_DIR/rep-seqs.qza
+
+#Visualize merged table ans seqs.
+qiime feature-table summarize \
+  --i-table $FEATURE_TABLE_DIR/table.qza \
+  --m-sample-metadata-file sample-metadata.tsv \
+  --o-visualization $FEATURE_TABLE_DIR/table.qzv
+
+qiime feature-table tabulate-seqs \
+  --i-data $FEATURE_TABLE_DIR/rep-seqs.qza \
+  --o-visualization $FEATURE_TABLE_DIR/rep-seqs.qzv

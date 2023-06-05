@@ -1,0 +1,112 @@
+#Set feature table directory variable.
+FEATURE_TABLE_DIR=feature_table
+
+#Set taxonomy directory variable and create working directory.
+TAXONOMY_DIR=taxonomy
+mkdir -p $TAXONOMY_DIR
+
+#Set '$CLASSIFIER' environment variable to the location of your pretrained classifier.
+CLASSIFIER=/hpc/group/helab/refDBs/q2-2022.2_pretrained_classifiers/SILVA_138/SILVA138_99_799-1193.qza
+
+#Taxonomic analysis.
+qiime feature-classifier classify-sklearn \
+  --i-classifier $CLASSIFIER \
+  --i-reads $FEATURE_TABLE_DIR/rep-seqs.qza \
+  --p-n-jobs $SLURM_CPUS_PER_TASK \
+  --o-classification $TAXONOMY_DIR/taxonomy.qza
+
+#Visualize taxonomy table.
+qiime metadata tabulate \
+  --m-input-file $TAXONOMY_DIR/taxonomy.qza \
+  --o-visualization $TAXONOMY_DIR/taxonomy.qzv
+
+#Generate taxa bar plot visualization.
+qiime taxa barplot \
+  --i-table $FEATURE_TABLE_DIR/table.qza \
+  --i-taxonomy $TAXONOMY_DIR/taxonomy.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization $TAXONOMY_DIR/taxa-bar-plots.qzv
+
+#Collapse samples by genotype and make tax bar plot.
+GROUP_COLUMN=nutrient
+
+qiime feature-table group \
+  --i-table $FEATURE_TABLE_DIR/table.qza \
+  --p-axis sample \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column $GROUP_COLUMN \
+  --p-mode sum \
+  --o-grouped-table $FEATURE_TABLE_DIR/table_$GROUP_COLUMN.qza
+
+qiime feature-table summarize \
+  --i-table $FEATURE_TABLE_DIR/table_$GROUP_COLUMN.qza \
+  --m-sample-metadata-file sample-metadata_$GROUP_COLUMN.tsv \
+  --o-visualization $FEATURE_TABLE_DIR/table_$GROUP_COLUMN.qzv
+
+qiime taxa barplot \
+  --i-table $FEATURE_TABLE_DIR/table_$GROUP_COLUMN.qza \
+  --i-taxonomy $TAXONOMY_DIR/taxonomy.qza \
+  --m-metadata-file sample-metadata_$GROUP_COLUMN.tsv \
+  --o-visualization $TAXONOMY_DIR/taxa-bar-plots_$GROUP_COLUMN.qzv
+
+#Filter out mitochondria and chloroplast from feature table.
+qiime taxa filter-table \
+  --i-table $FEATURE_TABLE_DIR/table.qza \
+  --i-taxonomy $TAXONOMY_DIR/taxonomy.qza \
+  --p-exclude Mitochondria,Chloroplast \
+  --o-filtered-table $FEATURE_TABLE_DIR/filtered_table.qza
+
+#Filter out mitochondria and chloroplast from rep-seqs.
+qiime taxa filter-seqs \
+  --i-sequences $FEATURE_TABLE_DIR/rep-seqs.qza \
+  --i-taxonomy $TAXONOMY_DIR/taxonomy.qza \
+  --p-exclude Mitochondria,Chloroplast \
+  --o-filtered-sequences $FEATURE_TABLE_DIR/filtered_rep-seqs.qza
+
+#Visualize filtered feature table.
+qiime feature-table summarize \
+  --i-table $FEATURE_TABLE_DIR/filtered_table.qza \
+  --m-sample-metadata-file sample-metadata.tsv \
+  --o-visualization $FEATURE_TABLE_DIR/filtered_table.qzv
+
+#Visualize filtered rep-seq table.
+qiime feature-table tabulate-seqs \
+  --i-data $FEATURE_TABLE_DIR/filtered_rep-seqs.qza \
+  --o-visualization $FEATURE_TABLE_DIR/filtered_rep-seqs.qzv
+
+#Visualize filtered taxa bar plot visualization.
+qiime taxa barplot \
+  --i-table $FEATURE_TABLE_DIR/filtered_table.qza \
+  --i-taxonomy $TAXONOMY_DIR/taxonomy.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization $TAXONOMY_DIR/taxa-bar-plots_filtered.qzv
+
+#Collapse samples by genotype and make tax bar plot with taxonomy-filtered features.
+GROUP_COLUMN=nutrient
+
+qiime feature-table group \
+  --i-table $FEATURE_TABLE_DIR/filtered_table.qza \
+  --p-axis sample \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column $GROUP_COLUMN \
+  --p-mode sum \
+  --o-grouped-table $FEATURE_TABLE_DIR/filtered_table_$GROUP_COLUMN.qza
+
+qiime feature-table summarize \
+  --i-table $FEATURE_TABLE_DIR/filtered_table_$GROUP_COLUMN.qza \
+  --m-sample-metadata-file sample-metadata_$GROUP_COLUMN.tsv \
+  --o-visualization $FEATURE_TABLE_DIR/filtered_table_$GROUP_COLUMN.qzv
+
+qiime taxa barplot \
+  --i-table $FEATURE_TABLE_DIR/filtered_table_$GROUP_COLUMN.qza \
+  --i-taxonomy $TAXONOMY_DIR/taxonomy.qza \
+  --m-metadata-file sample-metadata_$GROUP_COLUMN.tsv \
+  --o-visualization $TAXONOMY_DIR/taxa-bar-plots_filtered_$GROUP_COLUMN.qzv
+
+#Generate a tree for phylogenetic diversity analyses.
+qiime phylogeny align-to-tree-mafft-fasttree \
+  --i-sequences $FEATURE_TABLE_DIR/filtered_rep-seqs.qza \
+  --o-alignment $FEATURE_TABLE_DIR/filtered_rep-seqs_aligned.qza \
+  --o-masked-alignment $FEATURE_TABLE_DIR/filtered_rep-seqs_aligned_masked.qza \
+  --o-tree $TAXONOMY_DIR/unrooted-tree.qza \
+  --o-rooted-tree $TAXONOMY_DIR/rooted-tree.qza
